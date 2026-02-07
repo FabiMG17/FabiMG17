@@ -16,9 +16,6 @@ class Windows:
 
         # Importando JUEGO
         self.game = Game()
-        #self.game.create_unicursal_maze(4, 2)
-        self.maze_timeout = 0
-        self.show_maze = False
 
         # Imagenes Pantalla Juego y Seleccion De Dificultad
         self.img_choose_difficulty = pygame.image.load("src/img_background/Difficulty/Static_img.png").convert_alpha()
@@ -39,6 +36,7 @@ class Windows:
         self.all_lobby_buttons = pygame.sprite.Group()
         self.all_difficulty_buttons = pygame.sprite.Group()
         self.all_options_buttons = pygame.sprite.Group()
+        self.all_defeat_buttons = pygame.sprite.Group()
 
         self.result_value = "Main_Menu"
 
@@ -70,7 +68,7 @@ class Windows:
 
         img_medium_button = "src/img_button/medium_button.png"
         img_medium_button_hover = "src/img_button/medium_button_hover.png"
-        #medium_button = Button(490, 330, img_medium_button, img_medium_button_hover, "MEDIUM")
+        medium_button = Button(490, 330, img_medium_button, img_medium_button_hover, "MEDIUM")
 
         img_hard_button = "src/img_button/hard_button.png"
         img_hard_button_hover = "src/img_button/hard_button_hover.png"
@@ -80,16 +78,24 @@ class Windows:
         img_back_button_hover = "src/img_button/back_button_hover.png"
         back_button = Button(20, 630, img_back_button, img_back_button_hover, "Main_Menu")
 
-        self.all_difficulty_buttons.add(easy_button, hard_button, back_button)
+        self.all_difficulty_buttons.add(easy_button, medium_button, hard_button, back_button)
 
         # Botones Opciones Inicio
         self.title_options = Titles(390, 30, "src/img_titles_background/option.png")
 
         self.all_options_buttons.add(back_button)
 
-        # Botones Opciones
-        #self.img_icon_settings = "src/img_button/icon_settings.png"
-        #self.icon_settings = Button(1226, 8, self.img_icon_settings, self.img_icon_settings)
+        # Titulo Perdiste y Ganando
+        self.title_losing = Titles(380, 22, "src/img_titles_background/losing.png")
+        self.title_win = Titles(372, 16, "src/img_titles_background/winning.png")
+
+        img_try_again_button = "src/img_button/try_again.png"
+        img_try_again_button_hover = "src/img_button/try_again.png"
+        try_again = Button(430, 450, img_try_again_button, img_try_again_button_hover, "MENU_DIFFICULTY")
+
+        back_button_defeat = Button(490, 550, img_back_button, img_back_button_hover, "MENU_DIFFICULTY")
+
+        self.all_defeat_buttons.add(try_again, back_button_defeat)
 
     def music_lobby(self):
         try:
@@ -122,8 +128,10 @@ class Windows:
             state_menu = self.all_difficulty_buttons
         elif self.result_value == "OPTIONS":
             state_menu = self.all_options_buttons
-        elif self.result_value == "EASY":
-            self.game.event_to_change(event, self.show_maze)
+        elif self.result_value == "DEFEAT":
+            state_menu = self.all_defeat_buttons
+        elif self.result_value == "EASY" or self.result_value == "MEDIUM" or self.result_value == "HARD":
+            self.game.event_to_change(event)
 
         if state_menu:
             for event_btn in state_menu:
@@ -133,10 +141,14 @@ class Windows:
                     self.result_value = new_state
                 
                 if new_state == "EASY":
-                    self.game.create_unicursal_maze(8, 2)
-                    self.show_maze = True
-                    self.maze_timeout = pygame.time.get_ticks() + 5000
-
+                    self.game.create_unicursal_maze(4, 2, 5)
+                    self.game.reset(80000, 2, 5)
+                elif new_state == "MEDIUM":
+                    self.game.create_unicursal_maze(4, 3, 4)
+                    self.game.reset(60000, 3, 10)
+                elif new_state == "HARD":
+                    self.game.create_unicursal_maze(2, 4, 3)
+                    self.game.reset(45000, 1, 20)
 
         if event.type == pygame.QUIT or self.result_value == "QUIT":
             self.__running = False
@@ -169,19 +181,24 @@ class Windows:
                 self.title_options.draw(self.surface)
                 self.all_options_buttons.draw(self.surface)
 
-            elif self.result_value == "EASY":
-
+            elif self.result_value == "EASY" or self.result_value == "MEDIUM" or self.result_value == "HARD":
                 self.surface.blit(self.img_game, (0,0))
-                tiempo_actual = pygame.time.get_ticks()
+                self.game.validate_victory()
+                self.game.logic(self.surface, self.title_win, self.title_losing)
 
-                if self.show_maze:
-                    if tiempo_actual < self.maze_timeout:
-                        self.game.draw_maze(self.surface)
-                    else:
-                        self.show_maze = False
-                else:
-                    self.game.draw_maze_to_solve(self.surface)
-                    
+                if len(self.game.result) != 0:
+                    self.result_value = self.game.result
+
+            elif self.result_value == "DEFEAT":
+                self.surface.blit(self.img_game, (0,0))
+                self.title_losing.draw(self.surface)
+                self.game.data_screen(self.surface)
+                self.all_defeat_buttons.draw(self.surface)
+
+            elif self.result_value == "VICTORY":
+                self.surface.blit(self.img_game, (0,0))
+                self.title_win.draw(self.surface)
+                self.game.data_screen(self.surface)
 
             for event in pygame.event.get():
                 self.on_event(event)
@@ -191,7 +208,8 @@ class Windows:
 
 def main():
     pygame.init()
-    pygame.mixer.init() 
+    pygame.mixer.init()
+    pygame.font.init()
     windows = Windows("Maze:Light-Trace") #Size: 1280x720
     windows.main_loop()
 
