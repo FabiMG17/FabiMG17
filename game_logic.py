@@ -1,6 +1,6 @@
 import random
 import pygame
-//Hola chris
+
 class Game:
     def __init__(self):
         self.maze = []
